@@ -1,10 +1,11 @@
-/* Unjammed — offline cache. Bump CACHE when you ship a new build. */
-const CACHE = 'unjammed-v0.2.0';
+/* Unjammed — offline support.
+   Pages (HTML) are fetched network-first, so a new upload is picked up straight
+   away; everything else is cache-first. Bump CACHE when you ship a new build. */
+const CACHE = 'unjammed-v0.2.1';
 
 self.addEventListener('install', e => {
-  // Pre-cache the shell; hashed JS/CSS are cached on first fetch below.
   e.waitUntil(caches.open(CACHE)
-    .then(c => c.addAll(['./', './manifest.webmanifest', './icon-192.png', './icon-512.png']))
+    .then(c => c.addAll(['./', './manifest.webmanifest', './icon.png']))
     .then(() => self.skipWaiting()));
 });
 
@@ -16,13 +17,19 @@ self.addEventListener('activate', e => {
   );
 });
 
+const save = (req, res) => {
+  const copy = res.clone();
+  caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+  return res;
+};
+
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-      return res;
-    }).catch(() => caches.match('./')))
-  );
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  if (req.mode === 'navigate') {
+    e.respondWith(fetch(req).then(res => save(req, res))
+      .catch(() => caches.match(req).then(hit => hit || caches.match('./'))));
+    return;
+  }
+  e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => save(req, res))));
 });
