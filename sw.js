@@ -1,7 +1,7 @@
 /* Unjammed — offline support.
    Pages (HTML) are fetched network-first, so a new upload is picked up straight
    away; everything else is cache-first. Bump CACHE when you ship a new build. */
-const CACHE = 'unjammed-v0.2.1';
+const CACHE = 'unjammed-v0.4.0';
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE)
